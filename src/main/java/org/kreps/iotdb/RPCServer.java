@@ -1,11 +1,14 @@
 package org.kreps.iotdb;
 
+import io.grpc.Grpc;
+import io.grpc.InsecureServerCredentials;
 import io.grpc.Server;
-import io.grpc.ServerBuilder;
+import io.grpc.protobuf.services.ProtoReflectionService;
 
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 public class RPCServer {
 
@@ -27,21 +30,29 @@ public class RPCServer {
 
     private void start() throws IOException {
         int port = 50051;
-        server = ServerBuilder.forPort(port)
+        server = Grpc.newServerBuilderForPort(port, InsecureServerCredentials.create())
                 .addService(new SenderImpl())
+                .addService(ProtoReflectionService.newInstance())
                 .build()
                 .start();
         Logger.logInfo("RPCServer", "Server started, listening on " + port);
-        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
-            Logger.logInfo("RPCServer", "Shutting down gRPC server since JVM is shutting down");
-            RPCServer.this.stop();
-            Logger.logInfo("RPCServer", "Server shut down");
-        }));
+        Runtime.getRuntime().addShutdownHook(new Thread() {
+            @Override
+            public void run() {
+                Logger.logInfo("RPCServer", "Shutting down gRPC server since JVM is shutting down");
+                try {
+                    RPCServer.this.stop();
+                } catch (InterruptedException exception) {
+                    Logger.logError("RPCServer", exception.getMessage());
+                }
+                Logger.logInfo("RPCServer", "Server shut down");
+            }
+        });
     }
 
-    private void stop() {
+    private void stop() throws InterruptedException {
         if (server != null) {
-            server.shutdown();
+            server.shutdown().awaitTermination(30, TimeUnit.SECONDS);
         }
     }
 

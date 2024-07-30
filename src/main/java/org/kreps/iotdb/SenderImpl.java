@@ -31,7 +31,7 @@ public class SenderImpl extends SenderGrpc.SenderImplBase {
         String startDate = request.getStartDate();
         String endDate = request.getEndDate();
 
-        BlockingQueue<DataBatch> dataQueue = new LinkedBlockingQueue<>();
+        BlockingQueue<DataResponse> dataQueue = new LinkedBlockingQueue<>();
 
         // Submit the data reading task
         completionService.submit(() -> {
@@ -53,18 +53,20 @@ public class SenderImpl extends SenderGrpc.SenderImplBase {
                     }
                 }
 
-                DataBatch batch = dataQueue.poll(100, TimeUnit.MILLISECONDS);
-                if (batch != null) {
-                    // Assuming batch.getPoints() returns byte array
-                    DataResponse response = DataResponse.newBuilder().setPoints(null).build();
-                    responseObserver.onNext(response);
+                DataResponse dataResponse = dataQueue.poll(100, TimeUnit.MILLISECONDS);
+                
+                if (dataResponse != null) {
+                    long startTime = System.currentTimeMillis();
+                    responseObserver.onNext(dataResponse);
+                    long endTime = System.currentTimeMillis();
+                    Logger.logInfo("SenderImpl", String.format("Send points for %dms for measurement: %s", (endTime-startTime), measurement));
                 }
             } catch (InterruptedException exception) {
-                System.err.println(exception.getMessage());
+                Logger.logError("SenderImpl", exception.getMessage());
                 Thread.currentThread().interrupt(); // Preserve interrupt status
                 break;
             } catch (ExecutionException exception) {
-                System.err.println("Data reading task failed: " + exception.getCause().getMessage());
+                Logger.logError("SenderImpl", "Data reading task failed: " + exception.getCause().getMessage());
                 break;  
             }
         }

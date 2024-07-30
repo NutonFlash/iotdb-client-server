@@ -1,20 +1,28 @@
 {
+  "name": "grpc-web-client",
+  "version": "1.0.0",
+  "description": "gRPC-Web client using Protobuf.js",
+  "main": "index.js",
   "scripts": {
     "build": "webpack",
-    "start": "webpack serve"
+    "start": "webpack serve --mode development"
+  },
+  "dependencies": {
+    "google-protobuf": "^3.6.1",
+    "grpc-web": "^1.2.1",
+    "long": "^5.2.3",
+    "plotly.js-dist": "^2.33.0",
+    "protobufjs": "^6.11.2"
   },
   "devDependencies": {
     "@babel/core": "^7.24.9",
     "@babel/preset-env": "^7.24.8",
     "babel-loader": "^9.1.3",
     "copy-webpack-plugin": "^12.0.2",
+    "protobufjs-loader": "^2.0.2",
     "webpack": "^5.93.0",
     "webpack-cli": "^5.1.4",
     "webpack-dev-server": "^5.0.4",
     "worker-loader": "^3.0.8"
-  },
-  "dependencies": {
-    "plotly.js-dist": "^2.33.0",
-    "protobufjs": "^7.3.2"
   }
 }

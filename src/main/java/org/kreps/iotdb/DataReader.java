@@ -19,20 +19,24 @@ import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 
+import org.kreps.iotdb.compressor.LongArrayOutput;
+import org.kreps.iotdb.compressor.GorillaCompressor;
+import org.kreps.iotdb.protos.DataResponse;
+
+import com.google.protobuf.ByteString;
+
 public class DataReader {
 
     private final SessionPool sessionPool;
     private final ExecutorService executorService;
     private final AtomicLong totalReadingTime = new AtomicLong(0);
     private final AtomicLong totalReadPoints = new AtomicLong(0);
-    private final BlockingQueue<DataBatch> dataQueue;
+    private final BlockingQueue<DataResponse> dataQueue;
 
     private final int READING_BATCH_SIZE = 1000000;
-    private final int WRITING_BATCH_SIZE = 100000;
+    // private final int WRITING_BATCH_SIZE = 100000;
 
-    private final List<DataPoint> buffer = new ArrayList<>();
-
-    public DataReader(SessionPool sessionPool, int numThreads, BlockingQueue<DataBatch> dataQueue) {
+    public DataReader(SessionPool sessionPool, int numThreads, BlockingQueue<DataResponse> dataQueue) {
         this.sessionPool = sessionPool;
         this.executorService = Executors.newFixedThreadPool(numThreads);
         this.dataQueue = dataQueue;
@@ -95,14 +99,6 @@ public class DataReader {
             Thread.currentThread().interrupt();
         }
 
-        if (!buffer.isEmpty()) {
-            try {
-                flushBufferToQueue();
-            } catch (InterruptedException e) {
-                System.out.println(e.getMessage());
-            }
-        }
-
         long endReadingTime = System.currentTimeMillis();
         long totalTime = endReadingTime - startReadingTime;
 
@@ -121,13 +117,23 @@ public class DataReader {
 
         long pointCount = 0;
 
+        LongArrayOutput out = new LongArrayOutput();
+        GorillaCompressor compressor = new GorillaCompressor(start, out);
+
         while (dataSet.hasNext()) {
             RowRecord point = dataSet.next();
             long timestamp = point.getTimestamp();
             float value = point.getFields().get(0).getFloatV();
-            addToBuffer(new DataPoint(measurement, timestamp, value));
+            compressor.addValue(timestamp, value);
             pointCount++;
         }
+
+        compressor.close();
+
+        byte[] byteArr = out.getByteArray();
+        ByteString byteString = ByteString.copyFrom(byteArr);
+        DataResponse dataResponse = DataResponse.newBuilder().setPoints(byteString).build();
+        dataQueue.add(dataResponse);
 
         long endTime = System.currentTimeMillis();
         long duration = endTime - startTime;
@@ -136,41 +142,5 @@ public class DataReader {
         totalReadPoints.addAndGet(pointCount);
 
         return pointCount;
-    }
-
-    private synchronized void addToBuffer(DataPoint dataPoint) throws InterruptedException {
-        buffer.add(dataPoint);
-
-        if (buffer.size() >= WRITING_BATCH_SIZE) {
-            flushBufferToQueue();
-        }
-    }
-
-    private void flushBufferToQueue() throws InterruptedException {
-        Map<String, List<Long>> measurementTimestamps = new HashMap<>();
-        Map<String, List<Float>> measurementValues = new HashMap<>();
-
-        for (DataPoint point : buffer) {
-            measurementTimestamps.putIfAbsent(point.getMeasurement(), new ArrayList<>());
-            measurementValues.putIfAbsent(point.getMeasurement(), new ArrayList<>());
-            measurementTimestamps.get(point.getMeasurement()).add(point.getTimestamp());
-            measurementValues.get(point.getMeasurement()).add(point.getValue());
-        }
-
-        for (String measurement : measurementTimestamps.keySet()) {
-            List<Long> timestampsList = measurementTimestamps.get(measurement);
-            List<Float> valuesList = measurementValues.get(measurement);
-
-            long[] timestamps = timestampsList.stream().mapToLong(Long::longValue).toArray();
-            float[] values = new float[valuesList.size()];
-            for (int i = 0; i < valuesList.size(); i++) {
-                values[i] = valuesList.get(i);
-            }
-
-            DataBatch dataBatch = new DataBatch(measurement, timestamps, values);
-            dataQueue.put(dataBatch);
-        }
-
-        buffer.clear();
     }
 }
