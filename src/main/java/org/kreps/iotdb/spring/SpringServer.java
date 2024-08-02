@@ -10,7 +10,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 @SpringBootApplication
 public class SpringServer {
     public static void main(String[] args) {
-        List<String> nodeUrls = Arrays.asList("192.168.56.107:6667");
+        List<String> nodeUrls = Arrays.asList("192.168.0.202:6667");
         String username = "root";
         String password = "root";
         int poolSize = 10;

@@ -19,8 +19,11 @@ import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 
+import org.kreps.iotdb.compressor.LongArrayInput;
 import org.kreps.iotdb.compressor.LongArrayOutput;
+import org.kreps.iotdb.compressor.GorillaDecompressor;
 import org.kreps.iotdb.compressor.GorillaCompressor;
+import org.kreps.iotdb.compressor.Pair;
 import org.kreps.iotdb.protos.DataResponse;
 
 import com.google.protobuf.ByteString;
@@ -129,6 +132,19 @@ public class DataReader {
         }
 
         compressor.close();
+
+        LongArrayInput in = new LongArrayInput(out.getLongArray());
+        GorillaDecompressor decompressor = new GorillaDecompressor(in);
+
+        ArrayList<Pair> pairList = new ArrayList<>();
+        while (true) {
+            Pair pair = decompressor.readPair();
+            if (pair != null) {
+                pairList.add(pair);
+            } else {
+                break;
+            }
+        }
 
         byte[] byteArr = out.getByteArray();
         ByteString byteString = ByteString.copyFrom(byteArr);
