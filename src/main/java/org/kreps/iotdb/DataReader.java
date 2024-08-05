@@ -19,11 +19,11 @@ import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 
-import org.kreps.iotdb.compressor.LongArrayInput;
-import org.kreps.iotdb.compressor.LongArrayOutput;
-import org.kreps.iotdb.compressor.GorillaDecompressor;
-import org.kreps.iotdb.compressor.GorillaCompressor;
-import org.kreps.iotdb.compressor.Pair;
+import fi.iki.yak.ts.compression.gorilla.LongArrayInput;
+import fi.iki.yak.ts.compression.gorilla.LongArrayOutput;
+import fi.iki.yak.ts.compression.gorilla.GorillaDecompressor;
+import fi.iki.yak.ts.compression.gorilla.GorillaCompressor;
+import fi.iki.yak.ts.compression.gorilla.Pair;
 import org.kreps.iotdb.protos.DataResponse;
 
 import com.google.protobuf.ByteString;
@@ -123,30 +123,51 @@ public class DataReader {
         LongArrayOutput out = new LongArrayOutput();
         GorillaCompressor compressor = new GorillaCompressor(start, out);
 
+        // ArrayList<Long> timestamps = new ArrayList<>();
+        // ArrayList<Double> values = new ArrayList<>();
+
         while (dataSet.hasNext()) {
             RowRecord point = dataSet.next();
             long timestamp = point.getTimestamp();
             float value = point.getFields().get(0).getFloatV();
-            compressor.addValue(timestamp, value);
+            double valueDbL = (double) value;
+            compressor.addValue(timestamp, valueDbL);
+            // timestamps.add(timestamp);
+            // values.add(valueDbL);
+            // Logger.logInfo("DataReader", "Read timestamp: " + timestamp + ", value: " +
+            // valueDbL);
             pointCount++;
         }
 
+        // for (int i = 0; i < timestamps.size(); i++) {
+        // long timestamp = timestamps.get(i);
+        // double value = values.get(i);
+        // compressor.addValue(timestamp, value);
+        // Logger.logInfo("DataReader", "Compressed timestamp: " + timestamp + ", value:
+        // " + value);
+        // }
+
         compressor.close();
 
-        LongArrayInput in = new LongArrayInput(out.getLongArray());
-        GorillaDecompressor decompressor = new GorillaDecompressor(in);
+        // LongArrayInput in = new LongArrayInput(longArr);
+        // GorillaDecompressor decompressor = new GorillaDecompressor(in);
 
-        ArrayList<Pair> pairList = new ArrayList<>();
-        while (true) {
-            Pair pair = decompressor.readPair();
-            if (pair != null) {
-                pairList.add(pair);
-            } else {
-                break;
-            }
-        }
+        // ArrayList<Pair> pairList = new ArrayList<>();
+        // while (true) {
+        // Pair pair = decompressor.readPair();
+        // if (pair != null) {
+        // pairList.add(pair);
+        // Logger.logInfo("DataReader",
+        // "Decompressed timestamp: " + pair.getTimestamp() + ", value: " +
+        // pair.getDoubleValue());
+        // } else {
+        // break;
+        // }
+        // }
 
-        byte[] byteArr = out.getByteArray();
+        byte[] byteArr = longArrToByteArr(out.getLongArray());
+        long[] longArr = byteArrToLongArr(byteArr);
+        
         ByteString byteString = ByteString.copyFrom(byteArr);
         DataResponse dataResponse = DataResponse.newBuilder().setPoints(byteString).build();
         dataQueue.add(dataResponse);
@@ -158,5 +179,39 @@ public class DataReader {
         totalReadPoints.addAndGet(pointCount);
 
         return pointCount;
+    }
+
+    private byte[] longArrToByteArr(long[] longArray) {
+        // Each long is 8 bytes
+        int byteLength = longArray.length * Long.BYTES;
+        byte[] byteArray = new byte[byteLength];
+
+        for (int i = 0; i < longArray.length; i++) {
+            long value = longArray[i];
+            for (int j = 0; j < Long.BYTES; j++) {
+                byteArray[i * Long.BYTES + j] = (byte) (value >> (8 * (Long.BYTES - j - 1)));
+            }
+        }
+
+        return byteArray;
+    }
+
+    private long[] byteArrToLongArr(byte[] byteArray) {
+        if (byteArray.length % Long.BYTES != 0) {
+            throw new IllegalArgumentException("The byte array length must be a multiple of " + Long.BYTES);
+        }
+
+        int longArrLen = byteArray.length / Long.BYTES;
+        long[] longArray = new long[longArrLen];
+
+        for (int i = 0; i < longArrLen; i++) {
+            long value = 0;
+            for (int j = 0; j < Long.BYTES; j++) {
+                value = (value << 8) | (byteArray[i * Long.BYTES + j] & 0xFF);
+            }
+            longArray[i] = value;
+        }
+
+        return longArray;
     }
 }
