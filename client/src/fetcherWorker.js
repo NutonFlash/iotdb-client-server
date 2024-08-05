@@ -4,7 +4,7 @@ import GorillaDecompressor from './decompressor/GorillaDecompressor.js'
 import LongArrayInput from './decompressor/LongArrayInput.js'
 
 // Initialize the gRPC client for the data service
-const dataService = new SenderClient('http://192.168.56.107:8080', null, null);
+const dataService = new SenderClient('http://192.168.0.202:8080', null, null);
 
 let workerId = null;
 
@@ -66,11 +66,12 @@ async function fetchData(measurement, startDate, endDate) {
     const rawData = response.getPoints();
     const dataSize = rawData.length; // Size in bytes
 
-    const longArray = LongArrayInput.uint8ArrayToLongArray(rawData);
+    const bytes = convertToSignByteArr(rawData);
+    const longArray = LongArrayInput.uint8ArrayToLongArr(bytes);
     const input = new LongArrayInput(longArray);
     const decompressor = new GorillaDecompressor(input);
 
-    for (let i = 0; i < rawData.length; i++) {
+    while (true) {
       const pair = decompressor.readPair();
       if (pair === null) break;
       collection.push(pair);
@@ -103,4 +104,12 @@ async function fetchData(measurement, startDate, endDate) {
       message: `Completed fetching data for ${measurement} measurement. Time spent: ${(endTime - startTime) / 1000} seconds`,
     });
   });
+}
+
+function convertToSignByteArr(uint8Array) {
+  const signedByteArray = new Int8Array(uint8Array.length);
+  for (let i = 0; i < uint8Array.length; i++) {
+      signedByteArray[i] = uint8Array[i] < 128 ? uint8Array[i] : uint8Array[i] - 256;
+  }
+  return signedByteArray;
 }

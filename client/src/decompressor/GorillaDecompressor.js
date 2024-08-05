@@ -15,6 +15,7 @@ class GorillaDecompressor {
 
     readHeader() {
         this.blockTimestamp = this.in.getLong(64);
+        console.log('Header read, blockTimestamp:', this.blockTimestamp);
     }
 
     readPair() {
@@ -22,15 +23,16 @@ class GorillaDecompressor {
         if (this.endOfStream) {
             return null;
         }
+        console.log('Read pair:', { timestamp: this.storedTimestamp, value: this.storedVal });
         return { timestamp: this.storedTimestamp, value: this.storedVal };
     }
 
     next() {
         if (this.storedTimestamp === 0) {
             this.first();
-            return;
+        } else {
+            this.nextTimestamp();
         }
-        this.nextTimestamp();
     }
 
     first() {
@@ -83,5 +85,6 @@ class GorillaDecompressor {
         return (n >>> 1) ^ -(n & 1);
     }
 }
+
 
 export default GorillaDecompressor;
