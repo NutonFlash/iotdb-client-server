@@ -21,10 +21,8 @@ class ValueDecompressor {
                 this.storedTrailingZeros = 64 - significantBits - this.storedLeadingZeros;
             case 2:
                 let value = this.in.getLong(64 - this.storedLeadingZeros - this.storedTrailingZeros);
-                const check1 = value.toString();
                 value = value.shiftLeft(this.storedTrailingZeros);
                 value = this.predictor.predict().xor(value);
-                const check2 = value.toString();
                 this.predictor.update(value);
                 return value;
         }

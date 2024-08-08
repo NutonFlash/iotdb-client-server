@@ -1,5 +1,4 @@
 import Long from 'long';
-import GorillaDecompressor from './GorillaDecompressor';
 
 const MASK_ARRAY = [];
 const BIT_SET_MASK = [];
@@ -51,16 +50,11 @@ class LongArrayInput {
             this.checkAndFlipByte();
         } else {
             value = this.lB.and(MASK_ARRAY[this.bitsLeft - 1]);
-            let checkVal = value.toString();
-            let checkLB = this.lB.toString();
             bits -= this.bitsLeft;
             this.flipByte();
             value = value.shiftLeft(bits).or(this.lB.shiftRightUnsigned(this.bitsLeft - bits));
-            checkVal = value.toString();
-            checkLB = this.lB.toString();
             this.bitsLeft -= bits;
         }
-        const check = value.toString();
         return value;
     }
 
