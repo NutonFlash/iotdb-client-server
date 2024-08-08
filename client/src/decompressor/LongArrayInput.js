@@ -32,8 +32,12 @@ class LongArrayInput {
     }
 
     flipByte() {
+      if (this.position < this.longArray.length) {
         this.lB = this.longArray[this.position++];
         this.bitsLeft = 64;
+      } else {
+        this.lB = undefined;
+      }
     }
 
     checkAndFlipByte() {
