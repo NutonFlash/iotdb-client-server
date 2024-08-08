@@ -1,6 +1,8 @@
+import Long from 'long';
+
 class LastValuePredictor {
     constructor() {
-        this.storedVal = 0;
+        this.storedVal = Long.ZERO;
     }
 
     update(value) {
@@ -10,6 +12,6 @@ class LastValuePredictor {
     predict() {
         return this.storedVal;
     }
-}
+}   
 
 export default LastValuePredictor;
