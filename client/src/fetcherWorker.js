@@ -1,7 +1,7 @@
 import { DataRequest } from './proto/data_pb.js';
 import { SenderClient } from './proto/data_grpc_web_pb.js';
-import GorillaDecompressor from './decompressor2/GorillaDecompressor.js';
-import LongArrayInput from './decompressor2/LongArrayInput.js';
+import GorillaDecompressor from './decompressor/GorillaDecompressor.js';
+import LongArrayInput from './decompressor/LongArrayInput.js';
 
 // Initialize the gRPC client for the data service
 const dataService = new SenderClient('http://192.168.0.202:8080', null, null);
