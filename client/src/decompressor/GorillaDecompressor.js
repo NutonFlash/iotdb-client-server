@@ -53,6 +53,7 @@ class GorillaDecompressor {
     switch (readInstruction) {
       case 0x00:
         this.storedTimestamp = this.storedDelta.add(this.storedTimestamp);
+        this.storedVal = this.decompressor.nextValue();
         return;
       case 0x02:
         deltaDelta = this.in.getLong(7);
