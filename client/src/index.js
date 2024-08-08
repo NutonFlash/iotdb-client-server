@@ -1,4 +1,3 @@
-import Plotly from 'plotly.js-dist';
 import WorkerManager from './WorkerManager';
 import DataSplitter from './DataSplitter';
 import FetcherWorker from 'worker-loader!./fetcherWorker.js';
@@ -6,7 +5,7 @@ import FetcherWorker from 'worker-loader!./fetcherWorker.js';
 // const measurements = ['light', 'temperature', 'humidity', 'pressure', 'frequency'];
 const measurements = ['light'];
 const startDate = "2023-07-06 00:00:00";
-const endDate = "2023-07-06 00:00:01";
+const endDate = "2023-07-06 00:01:00";
 // const numWorkers = navigator.hardwareConcurrency || 5;
 const numWorkers = 1;
 

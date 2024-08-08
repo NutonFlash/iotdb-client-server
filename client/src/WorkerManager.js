@@ -52,8 +52,7 @@ class WorkerManager {
     }
     if (data) {
       const {measurement, collection} = data;
-      const firstPair = collection.slice(0, 51);
-      Logger.info(workerId, `First ${measurement} point of decompressed data:\n${JSON.stringify(firstPair)}`)
+      Logger.info(workerId, `First ${measurement} point of decompressed data:\n${JSON.stringify(collection, null, 2)}`)
     }
 
     // Mark worker as free and process next task

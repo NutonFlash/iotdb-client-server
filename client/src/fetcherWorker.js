@@ -1,7 +1,7 @@
 import { DataRequest } from './proto/data_pb.js';
 import { SenderClient } from './proto/data_grpc_web_pb.js';
-import GorillaDecompressor from './decompressor/GorillaDecompressor.js'
-import LongArrayInput from './decompressor/LongArrayInput.js'
+import GorillaDecompressor from './decompressor2/GorillaDecompressor.js';
+import LongArrayInput from './decompressor2/LongArrayInput.js';
 
 // Initialize the gRPC client for the data service
 const dataService = new SenderClient('http://192.168.0.202:8080', null, null);
@@ -67,7 +67,21 @@ async function fetchData(measurement, startDate, endDate) {
     const dataSize = rawData.length; // Size in bytes
 
     const bytes = convertToSignByteArr(rawData);
-    const longArray = LongArrayInput.uint8ArrayToLongArr(bytes);
+
+    // let byteArrStr = '[';
+    // bytes.forEach((byte, index) => byteArrStr += index !== bytes.length - 1 ? `${byte}, ` : byte);
+    // byteArrStr += ']';
+
+    // self.postMessage({ workerId, message: `Compressed data as byte[]: ${byteArrStr}` });
+
+    const longArray = LongArrayInput.uint8ArrToLongArr(bytes);
+
+    // let longArrStr = '[';
+    // longArray.forEach((long, index) => longArrStr += index !== longArray.length - 1 ? `${long.toString(10)}, ` : long.toString(10));
+    // longArrStr += ']';
+
+    // self.postMessage({ workerId, message: `Compressed data as long[]: ${longArrStr}` });
+
     const input = new LongArrayInput(longArray);
     const decompressor = new GorillaDecompressor(input);
 
@@ -76,6 +90,9 @@ async function fetchData(measurement, startDate, endDate) {
       if (pair === null) break;
       collection.push(pair);
     }
+
+    const collectionStr = JSON.stringify(collection, null, 1);
+    self.postMessage({ workerId, message: `collection" ${collectionStr}` });
 
     // Calculate delay since the last chunk
     const delay = currentTime - lastTimestamp;
@@ -109,7 +126,7 @@ async function fetchData(measurement, startDate, endDate) {
 function convertToSignByteArr(uint8Array) {
   const signedByteArray = new Int8Array(uint8Array.length);
   for (let i = 0; i < uint8Array.length; i++) {
-      signedByteArray[i] = uint8Array[i] < 128 ? uint8Array[i] : uint8Array[i] - 256;
+    signedByteArray[i] = uint8Array[i] < 128 ? uint8Array[i] : uint8Array[i] - 256;
   }
   return signedByteArray;
 }
