@@ -81,9 +81,6 @@ class LongArrayInput {
     let val = 0x00;
     for (let i = 0; i < maxBits; i++) {
       val <<= 1;
-      if (this.lB === undefined) {
-        throw new Error("End of input stream");
-      }
       const bit = this.readBit();
       if (bit) {
         val |= 0x01;
