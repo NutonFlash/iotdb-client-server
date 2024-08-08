@@ -20,17 +20,10 @@ import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 
-import org.kreps.iotdb.compressor.LongArrayInput;
 import org.kreps.iotdb.compressor.LongArrayOutput;
-import org.kreps.iotdb.compressor.GorillaDecompressor;
 import org.kreps.iotdb.compressor.GorillaCompressor;
-import org.kreps.iotdb.compressor.Pair;
 import org.kreps.iotdb.protos.DataResponse;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.SerializationFeature;
-import com.fasterxml.jackson.databind.node.ArrayNode;
-import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.google.protobuf.ByteString;
 
 public class DataReader {
@@ -128,9 +121,6 @@ public class DataReader {
         LongArrayOutput out = new LongArrayOutput();
         GorillaCompressor compressor = new GorillaCompressor(start, out);
 
-        // ArrayList<Long> timestamps = new ArrayList<>();
-        // ArrayList<Double> values = new ArrayList<>();
-
         while (dataSet.hasNext()) {
             RowRecord point = dataSet.next();
             long timestamp = point.getTimestamp();
@@ -138,49 +128,12 @@ public class DataReader {
             BigDecimal bd = new BigDecimal(Float.toString(value));
             double valueDouble = bd.doubleValue();
             compressor.addValue(timestamp, valueDouble);
-            // timestamps.add(timestamp);
-            // values.add(valueDbL);
-            Logger.logInfo("DataReader", "Read timestamp: " + timestamp + ", value: " +
-                    valueDouble);
             pointCount++;
         }
-
-        // for (int i = 0; i < timestamps.size(); i++) {
-        // long timestamp = timestamps.get(i);
-        // double value = values.get(i);
-        // compressor.addValue(timestamp, value);
-        // Logger.logInfo("DataReader", "Compressed timestamp: " + timestamp + ", value:
-        // " + value);
-        // }
 
         compressor.close();
 
         byte[] byteArr = longArrToByteArr(out.getLongArray());
-        // String byteArrStr = byteArrToStr(byteArr);
-        long[] longArr = byteArrToLongArr(byteArr);
-        // String longArrStr = longArrToStr(longArr);
-
-        // Logger.logInfo("DataReader", "Compressed data as byte[]: " + byteArrStr);
-        // Logger.logInfo("DataReader", "Compressed data as long[]: " + longArrStr);
-
-        LongArrayInput in = new LongArrayInput(longArr);
-        GorillaDecompressor decompressor = new GorillaDecompressor(in);
-
-        ArrayList<Pair> pairList = new ArrayList<>();
-        while (true) {
-            Pair pair = decompressor.readPair();
-            if (pair != null) {
-                pairList.add(pair);
-                // Logger.logInfo("DataReader",
-                //         "Decompressed timestamp: " + pair.getTimestamp() + ", value: " +
-                //                 pair.getDoubleValue());
-            } else {
-                break;
-            }
-        }
-
-        String pairListStr = convertPairsToJson(pairList);
-        Logger.logInfo("DataReader", "Decompressed data collection: " + pairListStr);
 
         ByteString byteString = ByteString.copyFrom(byteArr);
         DataResponse dataResponse = DataResponse.newBuilder().setPoints(byteString).build();
@@ -208,69 +161,5 @@ public class DataReader {
         }
 
         return byteArray;
-    }
-
-    private long[] byteArrToLongArr(byte[] byteArray) {
-        if (byteArray.length % Long.BYTES != 0) {
-            throw new IllegalArgumentException("The byte array length must be a multiple of " + Long.BYTES);
-        }
-
-        int longArrLen = byteArray.length / Long.BYTES;
-        long[] longArray = new long[longArrLen];
-
-        for (int i = 0; i < longArrLen; i++) {
-            long value = 0;
-            for (int j = 0; j < Long.BYTES; j++) {
-                value = (value << 8) | (byteArray[i * Long.BYTES + j] & 0xFF);
-            }
-            longArray[i] = value;
-        }
-
-        return longArray;
-    }
-
-    private String byteArrToStr(byte[] byteArray) {
-        StringBuilder sb = new StringBuilder();
-        sb.append("(");
-        for (int i = 0; i < byteArray.length; i++) {
-            sb.append(byteArray[i]);
-            if (i < byteArray.length - 1) {
-                sb.append(", ");
-            }
-        }
-        sb.append(")");
-        return sb.toString();
-    }
-
-    private String longArrToStr(long[] longArray) {
-        StringBuilder sb = new StringBuilder();
-        sb.append("(");
-        for (int i = 0; i < longArray.length; i++) {
-            sb.append(longArray[i]);
-            if (i < longArray.length - 1) {
-                sb.append(", ");
-            }
-        }
-        sb.append(")");
-        return sb.toString();
-    }
-
-    private String convertPairsToJson(List<Pair> pairs) {
-        ObjectMapper objectMapper = new ObjectMapper();
-        objectMapper.enable(SerializationFeature.INDENT_OUTPUT); // for pretty printing
-        try {
-            ArrayNode arrayNode = objectMapper.createArrayNode();
-            for (Pair pair : pairs) {
-                ObjectNode node = objectMapper.createObjectNode();
-                node.put("timestamp", String.valueOf(pair.getTimestamp()));
-                node.put("valueLong", String.valueOf(pair.getLongValue()));
-                node.put("valueDouble", String.valueOf(pair.getDoubleValue()));
-                arrayNode.add(node);
-            }
-            return objectMapper.writeValueAsString(arrayNode);
-        } catch (Exception e) {
-            e.printStackTrace();
-            return null;
-        }
     }
 }

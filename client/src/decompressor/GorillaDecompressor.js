@@ -21,12 +21,10 @@ class GorillaDecompressor {
     if (this.endOfStream) {
       return null;
     }
-    const valueLong = this.storedVal;
     const valueDouble = GorillaDecompressor.longBitsToDouble(this.storedVal);
     return {
-      timestamp: this.storedTimestamp.toString(),
-      valueLong: valueLong.toString(),
-      valueDouble: valueDouble.toString(),
+      timestamp: this.storedTimestamp,
+      value: valueDouble,
     };
   }
 
@@ -46,9 +44,6 @@ class GorillaDecompressor {
     }
     this.storedVal = this.decompressor.readFirst();
     this.storedTimestamp = this.blockTimestamp.add(this.storedDelta);
-    // console.log(
-    //   `After first() execution: storedDelta: ${this.storedDelta.toString()}, storedVal: ${this.storedVal.toString()}, storedTimestamp: ${this.storedTimestamp.toString()}`
-    // );
   }
 
   nextTimestamp() {
@@ -59,10 +54,6 @@ class GorillaDecompressor {
       case 0x00:
         this.storedTimestamp = this.storedDelta.add(this.storedTimestamp);
         const check = this.storedTimestamp.toString();
-        this.storedVal = this.decompressor.nextValue();
-        // console.log(
-        //   `After nextTimestamp() execution: readInstruction: ${readInstruction.toString()}, deltaDelta: ${deltaDelta.toString()}, storedDelta: ${this.storedDelta.toString()}, storedTimestamp: ${this.storedTimestamp.toString()}, storedVal: ${this.storedVal.toString()}`
-        // );
         return;
       case 0x02:
         deltaDelta = this.in.getLong(7);
@@ -81,9 +72,6 @@ class GorillaDecompressor {
         }
         break;
       default:
-        // console.log(
-        //   `After nextTimestamp() execution: readInstruction: ${readInstruction.toString()}, deltaDelta: ${deltaDelta.toString()}, storedDelta: ${this.storedDelta.toString()}, storedTimestamp: ${this.storedTimestamp.toString()}, storedVal: ${this.storedVal.toString()}`
-        // );
         return;
     }
 
@@ -92,12 +80,7 @@ class GorillaDecompressor {
     this.storedDelta = this.storedDelta.add(deltaDelta);
 
     this.storedTimestamp = this.storedDelta.add(this.storedTimestamp);
-    const check = this.storedTimestamp.toString();
     this.storedVal = this.decompressor.nextValue();
-    const check2 = this.storedVal.toString();
-    // console.log(
-    //   `After nextTimestamp() execution: readInstruction: ${readInstruction.toString()}, deltaDelta: ${deltaDelta.toString()}, storedDelta: ${this.storedDelta.toString()}, storedTimestamp: ${this.storedTimestamp.toString()}, storedVal: ${this.storedVal.toString()}`
-    // );
   }
 
   decodeZigZag32(n) {

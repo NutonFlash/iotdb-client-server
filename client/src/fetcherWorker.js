@@ -57,8 +57,6 @@ async function fetchData(measurement, startDate, endDate) {
     message: `Start fetching data for measurement "${measurement}" (${startDate} - ${endDate})`
   });
 
-  const performanceMetrics = { measurement, metrics: [] };
-
   // Stream event handlers
   stream.on("data", function (response) {
     const currentTime = Date.now();
@@ -67,20 +65,7 @@ async function fetchData(measurement, startDate, endDate) {
     const dataSize = rawData.length; // Size in bytes
 
     const bytes = convertToSignByteArr(rawData);
-
-    // let byteArrStr = '[';
-    // bytes.forEach((byte, index) => byteArrStr += index !== bytes.length - 1 ? `${byte}, ` : byte);
-    // byteArrStr += ']';
-
-    // self.postMessage({ workerId, message: `Compressed data as byte[]: ${byteArrStr}` });
-
     const longArray = LongArrayInput.uint8ArrToLongArr(bytes);
-
-    // let longArrStr = '[';
-    // longArray.forEach((long, index) => longArrStr += index !== longArray.length - 1 ? `${long.toString(10)}, ` : long.toString(10));
-    // longArrStr += ']';
-
-    // self.postMessage({ workerId, message: `Compressed data as long[]: ${longArrStr}` });
 
     const input = new LongArrayInput(longArray);
     const decompressor = new GorillaDecompressor(input);
@@ -91,15 +76,8 @@ async function fetchData(measurement, startDate, endDate) {
       collection.push(pair);
     }
 
-    const collectionStr = JSON.stringify(collection, null, 1);
-    self.postMessage({ workerId, message: `collection" ${collectionStr}` });
-
     // Calculate delay since the last chunk
-    const delay = currentTime - lastTimestamp;
     lastTimestamp = currentTime;
-
-    // Log the performance metric
-    performanceMetrics.metrics.push({ timestamp: currentTime, delay, dataSize });
 
     self.postMessage({ workerId, message: `Fetched ${dataSize / 1024}kb of points for measurement ${measurement}` });
   });
@@ -111,11 +89,6 @@ async function fetchData(measurement, startDate, endDate) {
   stream.on('end', function () {
     // Record the end time and calculate the duration
     const endTime = Date.now();
-    self.postMessage({
-      workerId,
-      data: { measurement, collection },
-      performanceMetrics
-    });
     self.postMessage({
       workerId,
       message: `Completed fetching data for ${measurement} measurement. Time spent: ${(endTime - startTime) / 1000} seconds`,

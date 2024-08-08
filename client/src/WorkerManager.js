@@ -52,7 +52,6 @@ class WorkerManager {
     }
     if (data) {
       const {measurement, collection} = data;
-      Logger.info(workerId, `First ${measurement} point of decompressed data:\n${JSON.stringify(collection, null, 2)}`)
     }
 
     // Mark worker as free and process next task
