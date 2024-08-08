@@ -6,6 +6,7 @@ import org.apache.iotdb.rpc.IoTDBConnectionException;
 import org.apache.iotdb.rpc.StatementExecutionException;
 import org.apache.iotdb.isession.pool.SessionDataSetWrapper;
 
+import java.math.BigDecimal;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
@@ -19,13 +20,17 @@ import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 
-import fi.iki.yak.ts.compression.gorilla.LongArrayInput;
-import fi.iki.yak.ts.compression.gorilla.LongArrayOutput;
-import fi.iki.yak.ts.compression.gorilla.GorillaDecompressor;
-import fi.iki.yak.ts.compression.gorilla.GorillaCompressor;
-import fi.iki.yak.ts.compression.gorilla.Pair;
+import org.kreps.iotdb.compressor.LongArrayInput;
+import org.kreps.iotdb.compressor.LongArrayOutput;
+import org.kreps.iotdb.compressor.GorillaDecompressor;
+import org.kreps.iotdb.compressor.GorillaCompressor;
+import org.kreps.iotdb.compressor.Pair;
 import org.kreps.iotdb.protos.DataResponse;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
+import com.fasterxml.jackson.databind.node.ArrayNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.google.protobuf.ByteString;
 
 public class DataReader {
@@ -130,12 +135,13 @@ public class DataReader {
             RowRecord point = dataSet.next();
             long timestamp = point.getTimestamp();
             float value = point.getFields().get(0).getFloatV();
-            double valueDbL = (double) value;
-            compressor.addValue(timestamp, valueDbL);
+            BigDecimal bd = new BigDecimal(Float.toString(value));
+            double valueDouble = bd.doubleValue();
+            compressor.addValue(timestamp, valueDouble);
             // timestamps.add(timestamp);
             // values.add(valueDbL);
-            // Logger.logInfo("DataReader", "Read timestamp: " + timestamp + ", value: " +
-            // valueDbL);
+            Logger.logInfo("DataReader", "Read timestamp: " + timestamp + ", value: " +
+                    valueDouble);
             pointCount++;
         }
 
@@ -149,25 +155,33 @@ public class DataReader {
 
         compressor.close();
 
-        // LongArrayInput in = new LongArrayInput(longArr);
-        // GorillaDecompressor decompressor = new GorillaDecompressor(in);
-
-        // ArrayList<Pair> pairList = new ArrayList<>();
-        // while (true) {
-        // Pair pair = decompressor.readPair();
-        // if (pair != null) {
-        // pairList.add(pair);
-        // Logger.logInfo("DataReader",
-        // "Decompressed timestamp: " + pair.getTimestamp() + ", value: " +
-        // pair.getDoubleValue());
-        // } else {
-        // break;
-        // }
-        // }
-
         byte[] byteArr = longArrToByteArr(out.getLongArray());
+        // String byteArrStr = byteArrToStr(byteArr);
         long[] longArr = byteArrToLongArr(byteArr);
-        
+        // String longArrStr = longArrToStr(longArr);
+
+        // Logger.logInfo("DataReader", "Compressed data as byte[]: " + byteArrStr);
+        // Logger.logInfo("DataReader", "Compressed data as long[]: " + longArrStr);
+
+        LongArrayInput in = new LongArrayInput(longArr);
+        GorillaDecompressor decompressor = new GorillaDecompressor(in);
+
+        ArrayList<Pair> pairList = new ArrayList<>();
+        while (true) {
+            Pair pair = decompressor.readPair();
+            if (pair != null) {
+                pairList.add(pair);
+                // Logger.logInfo("DataReader",
+                //         "Decompressed timestamp: " + pair.getTimestamp() + ", value: " +
+                //                 pair.getDoubleValue());
+            } else {
+                break;
+            }
+        }
+
+        String pairListStr = convertPairsToJson(pairList);
+        Logger.logInfo("DataReader", "Decompressed data collection: " + pairListStr);
+
         ByteString byteString = ByteString.copyFrom(byteArr);
         DataResponse dataResponse = DataResponse.newBuilder().setPoints(byteString).build();
         dataQueue.add(dataResponse);
@@ -213,5 +227,50 @@ public class DataReader {
         }
 
         return longArray;
+    }
+
+    private String byteArrToStr(byte[] byteArray) {
+        StringBuilder sb = new StringBuilder();
+        sb.append("(");
+        for (int i = 0; i < byteArray.length; i++) {
+            sb.append(byteArray[i]);
+            if (i < byteArray.length - 1) {
+                sb.append(", ");
+            }
+        }
+        sb.append(")");
+        return sb.toString();
+    }
+
+    private String longArrToStr(long[] longArray) {
+        StringBuilder sb = new StringBuilder();
+        sb.append("(");
+        for (int i = 0; i < longArray.length; i++) {
+            sb.append(longArray[i]);
+            if (i < longArray.length - 1) {
+                sb.append(", ");
+            }
+        }
+        sb.append(")");
+        return sb.toString();
+    }
+
+    private String convertPairsToJson(List<Pair> pairs) {
+        ObjectMapper objectMapper = new ObjectMapper();
+        objectMapper.enable(SerializationFeature.INDENT_OUTPUT); // for pretty printing
+        try {
+            ArrayNode arrayNode = objectMapper.createArrayNode();
+            for (Pair pair : pairs) {
+                ObjectNode node = objectMapper.createObjectNode();
+                node.put("timestamp", String.valueOf(pair.getTimestamp()));
+                node.put("valueLong", String.valueOf(pair.getLongValue()));
+                node.put("valueDouble", String.valueOf(pair.getDoubleValue()));
+                arrayNode.add(node);
+            }
+            return objectMapper.writeValueAsString(arrayNode);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return null;
+        }
     }
 }
