@@ -24,6 +24,7 @@ import org.kreps.iotdb.compressor.LongArrayOutput;
 import org.kreps.iotdb.compressor.GorillaCompressor;
 import org.kreps.iotdb.protos.DataResponse;
 
+import com.github.luben.zstd.Zstd;
 import com.google.protobuf.ByteString;
 
 public class DataReader {
@@ -134,8 +135,9 @@ public class DataReader {
         compressor.close();
 
         byte[] byteArr = longArrToByteArr(out.getLongArray());
+        byte[] byteArrCompress = Zstd.compress(byteArr, 22);
+        ByteString byteString = ByteString.copyFrom(byteArrCompress);
 
-        ByteString byteString = ByteString.copyFrom(byteArr);
         DataResponse dataResponse = DataResponse.newBuilder().setPoints(byteString).build();
         dataQueue.add(dataResponse);
 
