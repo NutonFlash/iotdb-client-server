@@ -1,5 +1,4 @@
-import Long from "long";
-import GorillaDecompressor from "./GorillaDecompressor";
+import Long from 'long';
 
 const MASK_ARRAY = [];
 const BIT_SET_MASK = [];
@@ -16,9 +15,6 @@ for (let i = 0; i < 64; i++) {
 for (let i = 0; i < 64; i++) {
   BIT_SET_MASK[i] = Long.ONE.shiftLeft(i);
 }
-
-// console.log(`MASK_ARRAY: ${MASK_ARRAY.map(mask => mask.toString())}`)
-// console.log(`MASK_ARRAY: ${BIT_SET_MASK.map(mask => mask.toString())}`)
 
 class LongArrayInput {
   constructor(array) {

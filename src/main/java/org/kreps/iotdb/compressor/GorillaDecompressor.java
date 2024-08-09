@@ -1,6 +1,5 @@
 package org.kreps.iotdb.compressor;
 
-import org.kreps.iotdb.Logger;
 import org.kreps.iotdb.compressor.predictors.LastValuePredictor;
 
 /**
@@ -67,9 +66,6 @@ public class GorillaDecompressor {
         }
         storedVal = decompressor.readFirst();
         storedTimestamp = blockTimestamp + storedDelta;
-        // Logger.logInfo("Decompressor",
-        //         String.format("After first() execution: storedDelta: %d, storedVal: %d, storedTimestamp: %d",
-        //                 storedDelta, storedVal, storedTimestamp));
     }
 
     private void nextTimestamp() {
@@ -81,10 +77,6 @@ public class GorillaDecompressor {
             case 0x00:
                 storedTimestamp = storedDelta + storedTimestamp;
                 storedVal = decompressor.nextValue();
-                // Logger.logInfo("Decompressor",
-                //         String.format(
-                //                 "After nextTimestamp() execution: readInstruction: %d, deltaDelta: %d, storedDelta: %d, storedTimestamp: %d, storedVal: %d",
-                //                 readInstruction, deltaDelta , storedDelta, storedTimestamp, storedVal));
                 return;
             case 0x02:
                 deltaDelta = in.getLong(7);
@@ -106,10 +98,6 @@ public class GorillaDecompressor {
                 }
                 break;
             default:
-                // Logger.logInfo("Decompressor",
-                //         String.format(
-                //                 "After nextTimestamp() execution: readInstruction: %d, deltaDelta: %d, storedDelta: %d, storedTimestamp: %d, storedVal: %d",
-                //                 readInstruction, deltaDelta , storedDelta, storedTimestamp, storedVal));
                 return;
         }
 
@@ -119,11 +107,6 @@ public class GorillaDecompressor {
 
         storedTimestamp = storedDelta + storedTimestamp;
         storedVal = decompressor.nextValue();
-
-        // Logger.logInfo("Decompressor",
-        //         String.format(
-        //                 "After nextTimestamp() execution: readInstruction: %d, deltaDelta: %d, storedDelta: %d, storedTimestamp: %d, storedVal: %d",
-        //                 readInstruction, deltaDelta, storedDelta, storedTimestamp, storedVal));
     }
 
     // START: From protobuf

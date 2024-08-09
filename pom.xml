@@ -75,6 +75,13 @@
             <scope>provided</scope>
         </dependency>
 
+        <!-- ZSTD Compression -->
+        <dependency>
+            <groupId>com.github.luben</groupId>
+            <artifactId>zstd-jni</artifactId>
+            <version>1.5.6-4</version>
+        </dependency>
+
         <!-- Spring Boot -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
@@ -130,28 +137,6 @@
             <artifactId>json</artifactId>
             <version>20240303</version>
         </dependency>
-
-        <!-- Compression -->
-        <!-- <dependency>
-            <groupId>org.apache.arrow</groupId>
-            <artifactId>arrow-vector</artifactId>
-            <version>15.0.0</version>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.arrow</groupId>
-            <artifactId>arrow-memory-core</artifactId>
-            <version>15.0.0</version>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.arrow</groupId>
-            <artifactId>arrow-compression</artifactId>
-            <version>15.0.0</version>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.arrow</groupId>
-            <artifactId>arrow-format</artifactId>
-            <version>15.0.0</version>
-        </dependency> -->
 
         <!-- Logging -->
         <dependency>

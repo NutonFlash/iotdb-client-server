@@ -1,25 +1,41 @@
-import Logger from './Logger';
+import Logger from "./Logger";
 
 class WorkerManager {
   constructor(workerScript, numWorkers) {
     this.numWorkers = numWorkers;
     this.workers = [];
     this.taskQueue = [];
-    this.workerStates = Array(numWorkers).fill('free');
+    this.workerStates = Array(numWorkers).fill("free");
     this.workerScript = workerScript;
   }
 
-  initWorkers() {
+  async initWorkers() {
     for (let i = 0; i < this.numWorkers; i++) {
-      const worker = new this.workerScript();;
-      worker.onmessage = this.handleWorkerMessage.bind(this);
+      const worker = new this.workerScript();
+
       worker.postMessage({ workerId: i + 1 });
+      
+      await new Promise((resolve, reject) => {
+        worker.onmessage = function (event) {
+          const { workerId, message } = event.data;
+          if (message === "Worker initialized") {
+            Logger.info(workerId, message);
+            resolve();
+          }
+        };
+        worker.onerror = function (error) {
+          reject(error);
+        };
+      });
+
+      worker.onmessage = this.handleWorkerMessage.bind(this);
+
       this.workers.push(worker);
     }
   }
 
   terminateWorkers() {
-    this.workers.forEach(worker => worker.terminate());
+    this.workers.forEach((worker) => worker.terminate());
     this.workers = [];
   }
 
@@ -30,12 +46,12 @@ class WorkerManager {
 
   processTaskQueue() {
     for (let i = 0; i < this.numWorkers; i++) {
-      if (this.workerStates[i] === 'free' && this.taskQueue.length > 0) {
+      if (this.workerStates[i] === "free" && this.taskQueue.length > 0) {
         const taskData = this.taskQueue.shift();
-        this.workerStates[i] = 'busy';
+        this.workerStates[i] = "busy";
         this.workers[i].postMessage(taskData);
       }
-    } 
+    }
   }
 
   handleWorkerMessage(event) {
@@ -51,12 +67,11 @@ class WorkerManager {
       Logger.perfomance(workerId, performanceMetrics);
     }
     if (data) {
-      const {measurement, collection} = data;
-      Logger.info(workerId, `First ${measurement} point of decompressed data:\n${JSON.stringify(collection, null, 2)}`)
+      const { measurement, collection } = data;
     }
 
     // Mark worker as free and process next task
-    this.workerStates[workerId] = 'free';
+    this.workerStates[workerId] = "free";
     this.processTaskQueue();
   }
 }

@@ -9,6 +9,7 @@ module.exports = {
     path: path.resolve(__dirname, 'dist'),
     publicPath: '/dist/'
   },
+  devtool: 'source-map',
   module: {
     rules: [
       {
