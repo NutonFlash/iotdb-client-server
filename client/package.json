@@ -8,6 +8,7 @@
     "start": "webpack serve --mode development"
   },
   "dependencies": {
+    "@oneidentity/zstd-js": "^1.0.3",
     "google-protobuf": "^3.6.1",
     "grpc-web": "^1.2.1",
     "long": "^5.2.3",
