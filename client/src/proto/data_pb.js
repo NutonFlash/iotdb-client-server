@@ -98,8 +98,9 @@ proto.batch.DataRequest.prototype.toObject = function(opt_includeInstance) {
 proto.batch.DataRequest.toObject = function(includeInstance, msg) {
   var f, obj = {
     measurement: jspb.Message.getFieldWithDefault(msg, 1, ""),
-    startdate: jspb.Message.getFieldWithDefault(msg, 2, ""),
-    enddate: jspb.Message.getFieldWithDefault(msg, 3, "")
+    interval: jspb.Message.getFieldWithDefault(msg, 2, ""),
+    startdate: jspb.Message.getFieldWithDefault(msg, 3, ""),
+    enddate: jspb.Message.getFieldWithDefault(msg, 4, "")
   };
 
   if (includeInstance) {
@@ -142,9 +143,13 @@ proto.batch.DataRequest.deserializeBinaryFromReader = function(msg, reader) {
       break;
     case 2:
       var value = /** @type {string} */ (reader.readString());
-      msg.setStartdate(value);
+      msg.setInterval(value);
       break;
     case 3:
+      var value = /** @type {string} */ (reader.readString());
+      msg.setStartdate(value);
+      break;
+    case 4:
       var value = /** @type {string} */ (reader.readString());
       msg.setEnddate(value);
       break;
@@ -184,17 +189,24 @@ proto.batch.DataRequest.serializeBinaryToWriter = function(message, writer) {
       f
     );
   }
-  f = message.getStartdate();
+  f = message.getInterval();
   if (f.length > 0) {
     writer.writeString(
       2,
       f
     );
   }
-  f = message.getEnddate();
+  f = message.getStartdate();
   if (f.length > 0) {
     writer.writeString(
       3,
+      f
+    );
+  }
+  f = message.getEnddate();
+  if (f.length > 0) {
+    writer.writeString(
+      4,
       f
     );
   }
@@ -220,10 +232,10 @@ proto.batch.DataRequest.prototype.setMeasurement = function(value) {
 
 
 /**
- * optional string startDate = 2;
+ * optional string interval = 2;
  * @return {string}
  */
-proto.batch.DataRequest.prototype.getStartdate = function() {
+proto.batch.DataRequest.prototype.getInterval = function() {
   return /** @type {string} */ (jspb.Message.getFieldWithDefault(this, 2, ""));
 };
 
@@ -232,16 +244,16 @@ proto.batch.DataRequest.prototype.getStartdate = function() {
  * @param {string} value
  * @return {!proto.batch.DataRequest} returns this
  */
-proto.batch.DataRequest.prototype.setStartdate = function(value) {
+proto.batch.DataRequest.prototype.setInterval = function(value) {
   return jspb.Message.setProto3StringField(this, 2, value);
 };
 
 
 /**
- * optional string endDate = 3;
+ * optional string startDate = 3;
  * @return {string}
  */
-proto.batch.DataRequest.prototype.getEnddate = function() {
+proto.batch.DataRequest.prototype.getStartdate = function() {
   return /** @type {string} */ (jspb.Message.getFieldWithDefault(this, 3, ""));
 };
 
@@ -250,8 +262,26 @@ proto.batch.DataRequest.prototype.getEnddate = function() {
  * @param {string} value
  * @return {!proto.batch.DataRequest} returns this
  */
-proto.batch.DataRequest.prototype.setEnddate = function(value) {
+proto.batch.DataRequest.prototype.setStartdate = function(value) {
   return jspb.Message.setProto3StringField(this, 3, value);
+};
+
+
+/**
+ * optional string endDate = 4;
+ * @return {string}
+ */
+proto.batch.DataRequest.prototype.getEnddate = function() {
+  return /** @type {string} */ (jspb.Message.getFieldWithDefault(this, 4, ""));
+};
+
+
+/**
+ * @param {string} value
+ * @return {!proto.batch.DataRequest} returns this
+ */
+proto.batch.DataRequest.prototype.setEnddate = function(value) {
+  return jspb.Message.setProto3StringField(this, 4, value);
 };
 
 

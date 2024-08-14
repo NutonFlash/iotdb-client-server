@@ -17,7 +17,7 @@ public class RPCServer {
     public static void main(String[] args) throws IOException, InterruptedException {
         List<String> nodeUrls = Arrays.asList("192.168.0.202:6667");
         String username = "root";
-        String password = "root";
+        String password = "root";   
         int poolSize = 10;
 
         SessionManager.initializeSessionPool(nodeUrls, username, password, poolSize);

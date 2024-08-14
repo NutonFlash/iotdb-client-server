@@ -23,7 +23,7 @@ class GorillaDecompressor {
     }
     const valueDouble = GorillaDecompressor.longBitsToDouble(this.storedVal);
     return {
-      timestamp: this.storedTimestamp,
+      timestamp: this.storedTimestamp.toNumber(),
       value: valueDouble,
     };
   }
