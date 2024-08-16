@@ -117,9 +117,6 @@ function fetchData(measurement, interval, startDate, endDate) {
           pointsNum++;
         }
 
-        const endDecompTime = Date.now();
-        decompressTime += (endDecompTime - startDecompTime) / 1000;
-
         // Send data to WorkerManager
         self.postMessage({
           data: {

@@ -75,7 +75,7 @@ class WorkerManager {
       Logger.info(workerId, message); // Log any messages from the worker
     }
     if (data) {
-      // Save data chunk in IndexedDB
+      // Reeceived data from Worker
       const { measurement, interval, collection } = data;
     }
     if (error || complete) {
