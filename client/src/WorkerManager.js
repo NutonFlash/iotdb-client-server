@@ -1,40 +1,42 @@
 import Logger from "./Logger";
 
 class WorkerManager {
-  constructor(workerScript, numWorkers, dbManager) {
+  constructor(workerScript, numWorkers) {
     this.numWorkers = numWorkers;
     this.workers = [];
     this.taskQueue = [];
     this.workerStates = Array(numWorkers).fill("free"); // Track the state of each worker ("free" or "busy")
     this.workerScript = workerScript;
     this.taskPromises = new Map(); // Map to store promises associated with each worker's task
-    this.dbManager = dbManager;
   }
 
-  async initWorkers() {
-    for (let i = 0; i < this.numWorkers; i++) {
-      const worker = new this.workerScript();
+   // Initialize all workers concurrently
+   async initWorkers() {
+    const initPromises = Array.from({ length: this.numWorkers }).map((_, i) => {
+      return this.initializeWorker(i);
+    });
+    await Promise.all(initPromises);
+  }
 
+  // Initialize a single worker
+  initializeWorker(i) {
+    return new Promise((resolve, reject) => {
+      const worker = new this.workerScript();
       worker.postMessage({ workerId: i + 1 });
 
-      // Await the worker's initialization to ensure it is ready before proceeding
-      await new Promise((resolve, reject) => {
-        worker.onmessage = function (event) {
-          const { workerId, message } = event.data;
-          if (message === "Worker initialized") {
-            Logger.info(workerId, message);
-            resolve();
-          }
-        };
-        worker.onerror = function (error) {
-          reject(error);
-        };
-      });
+      worker.onmessage = (event) => {
+        const { workerId, message } = event.data;
+        if (message === "Worker initialized") {
+          Logger.info(workerId, message);
+          resolve();
+        }
+      };
+
+      worker.onerror = (error) => reject(error);
 
       worker.onmessage = this.handleWorkerMessage.bind(this);
-
-      this.workers.push(worker); // Add the initialized worker to the workers array
-    }
+      this.workers.push(worker);
+    });
   }
 
   terminateWorkers() {
@@ -42,7 +44,7 @@ class WorkerManager {
     this.workers = []; // Clear the workers array
   }
 
-  async delegateTask(taskData) {
+  delegateTask(taskData) {
     return new Promise((resolve, reject) => {
       // Queue the task and its associated promise handlers
       this.taskQueue.push({ taskData, resolve, reject });
@@ -50,28 +52,20 @@ class WorkerManager {
     });
   }
 
-  async processTaskQueue() {
-    for (let i = 0; i < this.numWorkers; i++) {
-      if (this.workerStates[i] === "free" && this.taskQueue.length > 0) {
-        // If a worker is free and there are tasks in the queue, assign a task to the worker
+  // Non-blocking task processing for all workers
+  processTaskQueue() {
+    this.workerStates.forEach((state, i) => {
+      if (state === "free" && this.taskQueue.length > 0) {
         const { taskData, resolve, reject } = this.taskQueue.shift();
         this.workerStates[i] = "busy"; // Mark the worker as busy
 
-        // Create a new promise for the worker's task
-        const taskPromise = new Promise((taskResolve, taskReject) => {
-          this.taskPromises.set(i, {
-            resolve: taskResolve,
-            reject: taskReject,
-          });
-        });
+        // Store the resolve/reject functions for later use when the task completes
+        this.taskPromises.set(i, { resolve, reject });
 
-        this.workers[i].postMessage(taskData); // Send the task data to the worker
-
-        taskPromise.then(resolve).catch(reject); // Handle the promise resolution/rejection
-
-        break; // Exit the loop to process one task per worker at a time
+        // Send the task to the worker
+        this.workers[i].postMessage(taskData);
       }
-    }
+    });
   }
 
   async handleWorkerMessage(event) {
@@ -82,8 +76,7 @@ class WorkerManager {
     }
     if (data) {
       // Save data chunk in IndexedDB
-      const { itemKey, collection } = data;
-      await this.dbManager.write(itemKey, collection);
+      const { measurement, interval, collection } = data;
     }
     if (error || complete) {
       // If there's an error or the task is complete, resolve or reject the associated promise
@@ -126,49 +119,45 @@ class WorkerManager {
     }
   }
 
-  fetchCascadingData(measurement, interval, startDate, endDate) {
-    return new Promise(async (resolve, reject) => {
-      const intervals = ["month", "day", "hour", "minute", "second"];
-      const startIntervalIndex = intervals.indexOf(interval);
+  async fetchCascadingData(measurement, interval, startDate, endDate) {
+    const intervals = ["month", "day", "hour", "minute", "second"];
+    const startIntervalIndex = intervals.indexOf(interval);
 
-      if (startIntervalIndex === -1) {
-        throw new Error(`Invalid interval: ${interval}`);
-      }
+    if (startIntervalIndex === -1) {
+      throw new Error(`Invalid interval: ${interval}`);
+    }
 
-      // Process each interval sequentially from the specified start interval down to "second"
-      for (let i = startIntervalIndex; i < intervals.length; i++) {
-        const currentInterval = intervals[i];
-        const estimatedPoints = this.estimatePoints(
+    for (let i = startIntervalIndex; i < intervals.length; i++) {
+      const currentInterval = intervals[i];
+      const estimatedPoints = this.estimatePoints(
+        currentInterval,
+        startDate,
+        endDate
+      );
+
+      const POINTS_THRESHOLD = 1000000;
+
+      if (estimatedPoints > POINTS_THRESHOLD) {
+        const subTasks = this.splitTask(
+          measurement,
           currentInterval,
           startDate,
-          endDate
+          endDate,
+          estimatedPoints,
+          POINTS_THRESHOLD
         );
-
-        const POINTS_THRESHOLD = 1000000;
-
-        if (estimatedPoints > POINTS_THRESHOLD) {
-          // If estimated points exceed the threshold, split the task into subtasks
-          const subTasks = this.splitTask(
-            measurement,
-            currentInterval,
-            startDate,
-            endDate,
-            estimatedPoints,
-            POINTS_THRESHOLD
-          );
-          await Promise.all(subTasks.map((task) => this.delegateTask(task))); // Delegate each subtask to workers
-        } else {
-          await this.delegateTask({
-            measurement,
-            interval: currentInterval,
-            startDate,
-            endDate,
-          }); // Delegate the task if it's below the threshold
-        }
+        await Promise.all(
+          subTasks.map((task) => this.delegateTask(task)) // Delegate subtasks without blocking
+        );
+      } else {
+        await this.delegateTask({
+          measurement,
+          interval: currentInterval,
+          startDate,
+          endDate,
+        });
       }
-
-      resolve(); // Resolve the promise once all tasks are completed
-    });
+    }
   }
 
   splitTask(

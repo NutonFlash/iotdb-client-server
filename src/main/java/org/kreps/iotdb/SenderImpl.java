@@ -19,8 +19,8 @@ import io.grpc.stub.StreamObserver;
 
 public class SenderImpl extends SenderGrpc.SenderImplBase {
 
-    private static final int RPC_THREAD_POOL_SIZE = 15;
-    private static final int READER_THREAD_POOL_SIZE = 15;
+    private static final int RPC_THREAD_POOL_SIZE = 25;
+    private static final int READER_THREAD_POOL_SIZE = 25;
     private static final int BASE_POINTS_THRESHOLD = 1000000;
     private static final ExecutorService executorService = Executors.newFixedThreadPool(RPC_THREAD_POOL_SIZE);
 

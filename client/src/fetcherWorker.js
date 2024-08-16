@@ -117,13 +117,14 @@ function fetchData(measurement, interval, startDate, endDate) {
           pointsNum++;
         }
 
-        const firstPair = collection[0];
-        const lastPair = collection[1];
-        const itemKey = `${measurement}-${interval}-${firstPair.timestamp}-${lastPair.timestamp}`;
-        // Send data to WorkerManager to save it in localStorage
+        const endDecompTime = Date.now();
+        decompressTime += (endDecompTime - startDecompTime) / 1000;
+
+        // Send data to WorkerManager
         self.postMessage({
           data: {
-            itemKey,
+            measurement,
+            interval,
             collection,
           },
         });
@@ -157,7 +158,7 @@ function fetchData(measurement, interval, startDate, endDate) {
       const endTime = Date.now(); // End timing the data fetching process
       self.postMessage({
         workerId,
-        message: `Completed fetching data for ${measurement} at interval "${interval}".\n\t\t\t\tTime spent: ${
+        message: `Completed fetching data for ${measurement} at interval "${interval}".\n\t\t\t\tTotal time spent: ${
           (endTime - startTime) / 1000
         } seconds\n\t\t\t\tPoints fetched: ${pointsNum}\n\t\t\t\tData size: ${totalSize} bytes`,
         complete: true,

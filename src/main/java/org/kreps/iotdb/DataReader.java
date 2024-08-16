@@ -32,7 +32,8 @@ public class DataReader {
     private final SessionPool sessionPool;
     private final ExecutorService executorService;
     private final AtomicLong totalReadingTime = new AtomicLong(0); // Tracks total reading time across all threads
-    private final AtomicLong totalReadPoints = new AtomicLong(0); // Tracks total number of points read across all threads
+    private final AtomicLong totalReadPoints = new AtomicLong(0); // Tracks total number of points read across all
+                                                                  // threads
 
     public DataReader(SessionPool sessionPool, int numThreads) {
         this.sessionPool = sessionPool;
@@ -52,7 +53,9 @@ public class DataReader {
         List<Future<?>> futures = new ArrayList<>();
         for (int i = 0; i < threadCount; i++) {
             final long batchStart = startDate + i * segmentSize;
-            final long batchEnd = (i == threadCount - 1) ? endDate : (batchStart + segmentSize - 1); // Ensure the last segment ends at `endDate`
+            final long batchEnd = (i == threadCount - 1) ? endDate : (batchStart + segmentSize - 1); // Ensure the last
+                                                                                                     // segment ends at
+                                                                                                     // `endDate`
             final int threadIndex = i + 1;
 
             futures.add(executorService.submit(() -> {
@@ -74,6 +77,7 @@ public class DataReader {
                 future.get(); // Wait for all reading tasks to complete
             }
         } catch (InterruptedException | ExecutionException e) {
+            e.printStackTrace();
             Logger.logError("DataReader", "Task execution failed: " + e.getMessage());
             Thread.currentThread().interrupt(); // Preserve interrupt status
         }
@@ -102,9 +106,15 @@ public class DataReader {
 
         while (dataSet.hasNext()) {
             RowRecord point = dataSet.next();
+            
+            if (point.hasNullField()) {
+                continue;
+            }
+
             long timestamp = point.getTimestamp();
             double value = point.getFields().get(0).getDoubleV();
-            BigDecimal roundedValue = new BigDecimal(value).setScale(2, RoundingMode.HALF_UP); // Round to 2 decimal places
+            BigDecimal roundedValue = new BigDecimal(value).setScale(2, RoundingMode.HALF_UP); // Round to 2 decimal
+                                                                                               // places
             compressor.addValue(timestamp, roundedValue.doubleValue()); // Compress the timestamp-value pair
             pointCount++;
         }
@@ -149,7 +159,8 @@ public class DataReader {
 
     private String buildSqlQuery(String measurement, String interval, long start, long end) {
         String iotdbInterval = intervalToDBSymbol(interval);
-        // Build the SQL query string using the IoTDB interval and measurement information
+        // Build the SQL query string using the IoTDB interval and measurement
+        // information
         return String.format(
                 "SELECT AVG(%s) FROM root.kreps.djn01 WHERE time >= %d AND time <= %d GROUP BY ([%d, %d), %s)",
                 measurement, start, end, start, end, iotdbInterval);

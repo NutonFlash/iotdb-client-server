@@ -1,6 +1,5 @@
 import WorkerManager from "./WorkerManager";
 import FetcherWorker from "worker-loader!./fetcherWorker.js";
-import IndexedDBManager from "./IndexedDBManager";
 
 const measurements = [
   "light",
@@ -10,17 +9,14 @@ const measurements = [
   "frequency",
 ];
 const startDate = "2023-07-06 00:00:00";
-const endDate = "2023-08-03 00:00:00";
-const numWorkers = 15;
+const endDate = "2024-07-03 00:00:00";
+const numWorkers = 25;
 
 document.addEventListener("DOMContentLoaded", async function () {
-  const dbManager = new IndexedDBManager('MyDatabase', 'DataStore');
-  const workerManager = new WorkerManager(FetcherWorker, numWorkers, dbManager);
+  const workerManager = new WorkerManager(FetcherWorker, numWorkers);
 
-  // Initialize IndexedDB
-  await dbManager.init();
   // Initialize workers before starting the data fetch
-  await workerManager.initWorkers();
+  workerManager.initWorkers();
 
   const promises = [];
   const startTime = Date.now(); // Capture start time to measure total duration
@@ -29,7 +25,7 @@ document.addEventListener("DOMContentLoaded", async function () {
     // Fetch data for each measurement across different time intervals ("month", "day", etc.)
     const promise = workerManager.fetchCascadingData(
       measurement,
-      "day",  // Start with "day" interval and progressively fetch smaller intervals
+      "month",  // Start with "month" interval and progressively fetch smaller intervals
       startDate,
       endDate
     );
